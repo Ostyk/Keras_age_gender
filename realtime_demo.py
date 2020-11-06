@@ -73,15 +73,15 @@ class FaceCV(object):
         resized_img = np.array(resized_img)
         return resized_img, (x_a, y_a, x_b - x_a, y_b - y_a)
 
-    def detect_face(self):
+    def detect_face(self, video_path):
         face_cascade = cv2.CascadeClassifier(self.CASE_PATH)
 
         # 0 means the default video capture device in OS
-        video_capture = cv2.VideoCapture(0)
+        video_capture = cv2.VideoCapture(video_path)
         # infinite loop, break by key ESC
         while True:
             if not video_capture.isOpened():
-                sleep(5)
+                sleep(2)
             # Capture frame-by-frame
             ret, frame = video_capture.read()
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -127,6 +127,8 @@ def get_args():
                         help="depth of network")
     parser.add_argument("--width", type=int, default=8,
                         help="width of network")
+    parser.add_argument("--video_path", type=str, default=None,
+                        help="patht to video")
     args = parser.parse_args()
     return args
 
@@ -136,8 +138,8 @@ def main():
     width = args.width
 
     face = FaceCV(depth=depth, width=width)
-
-    face.detect_face()
+    video_path = args.video_path
+    face.detect_face(video_path)
 
 if __name__ == "__main__":
     main()
