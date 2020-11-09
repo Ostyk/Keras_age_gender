@@ -14,6 +14,7 @@ class FaceCV(object):
     Singleton class for face recongnition task
     """
     CASE_PATH = ".\\pretrained_models\\haarcascade_frontalface_alt.xml"
+   # CASE_PATH = ".\\pretrained_models\\haarcascade_frontalface_alt.xml"
     WRN_WEIGHTS_PATH = "https://github.com/Tony607/Keras_age_gender/releases/download/V1.0/weights.18-4.06.hdf5"
 
 
@@ -75,9 +76,12 @@ class FaceCV(object):
 
     def detect_face(self, video_path):
         face_cascade = cv2.CascadeClassifier(self.CASE_PATH)
-
+        
+        
         # 0 means the default video capture device in OS
         video_capture = cv2.VideoCapture(video_path)
+        #out = cv2.VideoWriter('output.avi', -1, 20.0, (960,540))
+        out = cv2.VideoWriter('output_now.avi', cv2.VideoWriter_fourcc('M','J','P','G'), 30, (960//2, 540//2))
         # infinite loop, break by key ESC
         while True:
             if not video_capture.isOpened():
@@ -87,8 +91,8 @@ class FaceCV(object):
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             faces = face_cascade.detectMultiScale(
                 gray,
-                scaleFactor=1.2,
-                minNeighbors=10,
+                scaleFactor=1.1,
+                minNeighbors=4,
                 minSize=(self.face_size, self.face_size)
             )
             # placeholder for cropped faces
@@ -109,11 +113,16 @@ class FaceCV(object):
                 label = "{}, {}".format(int(predicted_ages[i]),
                                         "F" if predicted_genders[i][0] > 0.5 else "M")
                 self.draw_label(frame, (face[0], face[1]), label)
-
+                
+            #frame = cv2.flip(frame,180)
+            frame = cv2.resize(frame,(960//2,540//2))
+            out.write(frame)
             cv2.imshow('Keras Faces', frame)
             if cv2.waitKey(5) == 27:  # ESC key press
+                out.release()
                 break
         # When everything is done, release the capture
+        out.release()
         video_capture.release()
         cv2.destroyAllWindows()
 
