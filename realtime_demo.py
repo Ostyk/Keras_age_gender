@@ -74,57 +74,65 @@ class FaceCV(object):
         resized_img = np.array(resized_img)
         return resized_img, (x_a, y_a, x_b - x_a, y_b - y_a)
 
-    def detect_face(self, video_path):
+    def detect_face(self, video_path, output_path, FPS, output_size=1):
         face_cascade = cv2.CascadeClassifier(self.CASE_PATH)
         
         
         # 0 means the default video capture device in OS
         video_capture = cv2.VideoCapture(video_path)
         #out = cv2.VideoWriter('output.avi', -1, 20.0, (960,540))
-        out = cv2.VideoWriter('output_now.avi', cv2.VideoWriter_fourcc('M','J','P','G'), 30, (960//2, 540//2))
+        out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc('M','J','P','G'), FPS, (1280//output_size, 720//output_size))
         # infinite loop, break by key ESC
-        while True:
-            if not video_capture.isOpened():
-                sleep(2)
-            # Capture frame-by-frame
-            ret, frame = video_capture.read()
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            faces = face_cascade.detectMultiScale(
-                gray,
-                scaleFactor=1.1,
-                minNeighbors=4,
-                minSize=(self.face_size, self.face_size)
-            )
-            # placeholder for cropped faces
-            face_imgs = np.empty((len(faces), self.face_size, self.face_size, 3))
-            for i, face in enumerate(faces):
-                face_img, cropped = self.crop_face(frame, face, margin=40, size=self.face_size)
-                (x, y, w, h) = cropped
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 200, 0), 2)
-                face_imgs[i,:,:,:] = face_img
-            if len(face_imgs) > 0:
-                # predict ages and genders of the detected faces
-                results = self.model.predict(face_imgs)
-                predicted_genders = results[0]
-                ages = np.arange(0, 101).reshape(101, 1)
-                predicted_ages = results[1].dot(ages).flatten()
-            # draw results
-            for i, face in enumerate(faces):
-                label = "{}, {}".format(int(predicted_ages[i]),
-                                        "F" if predicted_genders[i][0] > 0.5 else "M")
-                self.draw_label(frame, (face[0], face[1]), label)
-                
-            #frame = cv2.flip(frame,180)
-            frame = cv2.resize(frame,(960//2,540//2))
-            out.write(frame)
-            cv2.imshow('Keras Faces', frame)
-            if cv2.waitKey(5) == 27:  # ESC key press
-                out.release()
-                break
-        # When everything is done, release the capture
-        out.release()
-        video_capture.release()
-        cv2.destroyAllWindows()
+        label="0,0"
+        
+        csv_path = output_path.split(".")[0]+".csv"
+        print(f"saving csv to {csv_path}")
+        with open(csv_path, "w") as file:
+        
+            while True:
+                if not video_capture.isOpened():
+                    sleep(2)
+                # Capture frame-by-frame
+                ret, frame = video_capture.read()
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                faces = face_cascade.detectMultiScale(
+                    gray,
+                    scaleFactor=1.1,
+                    minNeighbors=4,
+                    minSize=(self.face_size, self.face_size)
+                )
+                # placeholder for cropped faces
+                face_imgs = np.empty((len(faces), self.face_size, self.face_size, 3))
+                for i, face in enumerate(faces):
+                    face_img, cropped = self.crop_face(frame, face, margin=40, size=self.face_size)
+                    (x, y, w, h) = cropped
+                    cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 200, 0), 2)
+                    face_imgs[i,:,:,:] = face_img
+                if len(face_imgs) > 0:
+                    # predict ages and genders of the detected faces
+                    results = self.model.predict(face_imgs)
+                    predicted_genders = results[0]
+                    ages = np.arange(0, 101).reshape(101, 1)
+                    predicted_ages = results[1].dot(ages).flatten()
+                # draw results
+                for i, face in enumerate(faces):
+                    label = "{}, {}".format(int(predicted_ages[i]),
+                                            "F" if predicted_genders[i][0] > 0.5 else "M")
+                    self.draw_label(frame, (face[0], face[1]), label)
+                #print(label)
+                file.write(label)
+                file.write("\n")
+                #frame = cv2.flip(frame,180)
+                frame = cv2.resize(frame,(frame.shape[1]//output_size,frame.shape[0]//output_size))
+                out.write(frame)
+                cv2.imshow('Keras Faces', frame)
+                if cv2.waitKey(5) == 27:  # ESC key press
+                    out.release()
+                    break
+            # When everything is done, release the capture
+            out.release()
+            video_capture.release()
+            cv2.destroyAllWindows()
 
 
 def get_args():
@@ -137,7 +145,13 @@ def get_args():
     parser.add_argument("--width", type=int, default=8,
                         help="width of network")
     parser.add_argument("--video_path", type=str, default=None,
-                        help="patht to video")
+                        help="path to video")
+    parser.add_argument("--output_path", type=str, default=None,
+                        help="path to video output")
+    parser.add_argument("--FPS", type=int, default=30,
+                        help="output FPS")
+    parser.add_argument("--output_size", type=int, default=1,
+                        help="output size (1 is original, 2 is half etc..")
     args = parser.parse_args()
     return args
 
@@ -147,8 +161,11 @@ def main():
     width = args.width
 
     face = FaceCV(depth=depth, width=width)
-    video_path = args.video_path
-    face.detect_face(video_path)
+        
+    face.detect_face(args.video_path,
+                     args.output_path, 
+                     args.FPS,
+                     args.output_size)
 
 if __name__ == "__main__":
     main()

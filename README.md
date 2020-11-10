@@ -25,7 +25,7 @@ pip3 install -r requirements.txt
 
 ## Run the demo
 ```
-python realtime_demo.py
+python .\realtime_demo.py --video_path '.\raw_videos\dt.mp4' --output_path output_videos\dt_out.mp4 --output_size 2     
 ```
 
 When you use it for the first time , weights are downloaded and stored in **./pretrained_models** folder.
